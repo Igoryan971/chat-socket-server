@@ -5,7 +5,9 @@ const cors = require("cors");
 const app = express();
 
 const route = require("./route");
-const { addUser, findUser, getRoomUsers, removeUser } = require("./users");
+const { addUser, findUser, getRoomUsers, removeUser, findUserById} = require("./users");
+const {logWithTime} = require("./utils");
+const {addOperator} = require("./operators");
 
 app.use(cors({ origin: "*" }));
 app.use(route);
@@ -20,54 +22,45 @@ const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
-  socket.on("join", ({ name, room }) => {
-    socket.join(room);
+  let operatorId = 0;
 
-    const { user, isExist } = addUser({ name, room });
+  socket.on("joinUser", ({ name, keyPart }) => {
+    console.log('joinUser', name, keyPart);
 
-    const userMessage = isExist
-      ? `${user.name}, вернулся`
-      : `Привет ${user.name}`;
+    const userId = addUser( name, keyPart, socket);
+    operatorId = 1;
+
+    logWithTime('подключился пользователь', userId);
+    socket.emit("message", {
+      data: { user: { name: "Info" }, message: "Добро пожаловать!" },
+    });
+
+  });
+
+  socket.on("joinOperator", ({ name}) => {
+    console.log('joinUser', name, keyPart);
+
+    const operatorId = addOperator( name, keyPart, socket);
+    logWithTime('подключился оператор', operatorId);
 
     socket.emit("message", {
-      data: { user: { name: "Admin" }, message: userMessage },
+      data: { user: { name: "Info" }, message: "Добро пожаловать! Ваш номер" + operatorId},
     });
 
-    socket.broadcast.to(user.room).emit("message", {
-      data: {
-        user: { name: "Admin" },
-        message: `${user.name} присоединился к чату`,
-      },
-    });
-
-    io.to(user.room).emit("room", {
-      data: { users: getRoomUsers(user.room) },
-    });
   });
 
-  socket.on("sendMessage", ({ message, params }) => {
-    const user = findUser(params);
+
+  socket.on("sendMessageOperatorToUser", ({ message, id }) => {
+    console.log('sendMessageOperatorToUser', message, id)
+    const user = findUserById(id);
 
     if (user) {
-      io.to(user.room).emit("message", { data: { user, message } });
-    }
-  });
-
-  socket.on("leftRoom", ({ params }) => {
-    const user = removeUser(params);
-
-    if (user) {
-      const { room, name } = user;
-
-      io.to(room).emit("message", {
-        data: { user: { name: "Admin" }, message: `${name} покинул чат` },
-      });
-
-      io.to(room).emit("room", {
-        data: { users: getRoomUsers(room) },
+      user.socket.emit("message", {
+        data: { user: { name: "Operator" }, message: message },
       });
     }
   });
+
 
   io.on("disconnect", () => {
     console.log("Disconnect");

@@ -1,38 +1,25 @@
 const { trimStr } = require("./utils");
 
-let users = [];
+let users = {};
+/*
+id => {name, keyPart, operatorId, socket}
+ */
 
-const findUser = (user) => {
-  const userName = trimStr(user.name);
-  const userRoom = trimStr(user.room);
+let currentUserId = 0;
 
-  return users.find(
-    (u) => trimStr(u.name) === userName && trimStr(u.room) === userRoom
-  );
+const findUserById = (id) => {
+  return users.id;
 };
 
-const addUser = (user) => {
-  const isExist = findUser(user);
-
-  !isExist && users.push(user);
-
-  const currentUser = isExist || user;
-
-  return { isExist: !!isExist, user: currentUser };
+const addUser = (name, keyPart, socket) => {
+  currentUserId++;
+  users.currentUserId = {name, keyPart, socket, operatorId: 0};
+  return currentUserId;
 };
 
-const getRoomUsers = (room) => users.filter((u) => u.room === room);
 
-const removeUser = (user) => {
-  const found = findUser(user);
-
-  if (found) {
-    users = users.filter(
-      ({ room, name }) => room === found.room && name !== found.name
-    );
-  }
-
-  return found;
+const removeUser = (id) => {
+  delete users.id;
 };
 
-module.exports = { addUser, findUser, getRoomUsers, removeUser };
+module.exports = { addUser, findUserById, removeUser };
